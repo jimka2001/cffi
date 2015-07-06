@@ -599,18 +599,19 @@ The foreign array must be freed with foreign-array-free."
 (defvar *verbose-deprecated-struct-type-style-warning-p* t)
 
 (defun parse-deprecated-struct-type (name struct-or-union body)
+  (declare (ignore body))
   (check-type struct-or-union (member :struct :union))
   (let* ((struct-type-name `(,struct-or-union ,name))
          (struct-type (parse-type struct-type-name)))
-    (when *verbose-deprecated-struct-type-style-warning-p*
-      (simple-style-warning
-       "bare references to struct types are deprecated. ~
-      Please use ~S or ~S instead of ~A ~A ~%in %A."
-       `(:pointer ,struct-type-name)
-       struct-type-name
-       name
-       struct-or-union
-       body))
+    ;; (when *verbose-deprecated-struct-type-style-warning-p*
+    ;;   (simple-style-warning
+    ;;    "bare references to struct types are deprecated. ~
+    ;;   Please use ~S or ~S instead of ~A ~A ~%in ~A."
+    ;;    `(:pointer ,struct-type-name)
+    ;;    struct-type-name
+    ;;    name
+    ;;    struct-or-union
+    ;;    body))
     (make-instance (class-of struct-type)
                    :alignment (alignment struct-type)
                    :size (size struct-type)
