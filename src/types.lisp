@@ -596,22 +596,27 @@ The foreign array must be freed with foreign-array-free."
       (make-instance 'simple-struct-slot :offset offset :type type
                      :name name)))
 
-(defvar *verbose-deprecated-struct-type-style-warning-p* t)
-
-(defun parse-deprecated-struct-type (name struct-or-union body)
-  (declare (ignore body))
+(defvar *verbose-deprecated-struct-type-style-warning-p* nil)
+(defvar *break-on-deprecated-struct-type-style-warning-p* nil)
+(defun parse-deprecated-struct-type (name struct-or-union)
   (check-type struct-or-union (member :struct :union))
   (let* ((struct-type-name `(,struct-or-union ,name))
          (struct-type (parse-type struct-type-name)))
-    ;; (when *verbose-deprecated-struct-type-style-warning-p*
-    ;;   (simple-style-warning
-    ;;    "bare references to struct types are deprecated. ~
-    ;;   Please use ~S or ~S instead of ~A ~A ~%in ~A."
-    ;;    `(:pointer ,struct-type-name)
-    ;;    struct-type-name
-    ;;    name
-    ;;    struct-or-union
-    ;;    body))
+    (when *verbose-deprecated-struct-type-style-warning-p*
+      (simple-style-warning
+       "bare references to struct types are deprecated. ~
+      Please use ~S or ~S instead of ~A ~A."
+       `(:pointer ,struct-type-name)
+       struct-type-name
+       name
+       struct-or-union))
+    (when *break-on-deprecated-struct-type-style-warning-p*
+      (break "bare references to struct types are deprecated. ~%
+Please use ~S or ~S instead of ~A ~A."
+             `(:pointer ,struct-type-name)
+       struct-type-name
+       name
+       struct-or-union))
     (make-instance (class-of struct-type)
                    :alignment (alignment struct-type)
                    :size (size struct-type)
@@ -712,7 +717,7 @@ The foreign array must be freed with foreign-array-free."
 
 (defvar *defcstruct-hook* nil)
 
-(defmacro defcstruct (&whole body name-and-options &body fields)
+(defmacro defcstruct (name-and-options &body fields)
   "Define the layout of a foreign structure."
   (discard-docstring fields)
   (destructuring-bind (name . options)
@@ -736,7 +741,7 @@ The foreign array must be freed with foreign-array-free."
              ;; forms to include in the expansion.
              (apply *defcstruct-hook* name-and-options fields))
          (define-parse-method ,name ()
-           (parse-deprecated-struct-type ',name :struct ',body))
+           (parse-deprecated-struct-type ',name :struct))
          '(:struct ,name)))))
 
 ;;;## Accessing Foreign Structure Slots
@@ -899,7 +904,7 @@ slots will be defined and stored."
 (define-parse-method :union (name)
   (funcall (find-type-parser name :union)))
 
-(defmacro defcunion (&whole body name-and-options &body fields)
+(defmacro defcunion (name-and-options &body fields)
   "Define the layout of a foreign union."
   (discard-docstring fields)
   (destructuring-bind (name &key size)
@@ -908,7 +913,7 @@ slots will be defined and stored."
     `(eval-when (:compile-toplevel :load-toplevel :execute)
        (notice-foreign-union-definition ',name-and-options ',fields)
        (define-parse-method ,name ()
-         (parse-deprecated-struct-type ',name :union ',body))
+         (parse-deprecated-struct-type ',name :union))
        '(:union ,name))))
 
 ;;;# Operations on Types
